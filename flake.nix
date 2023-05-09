@@ -8,7 +8,7 @@
     dbmigrations-postgresql.url = "github:nuttycom/dbmigrations-postgresql/3c9477e45e923b28d9677dc6291e35bb7c833c28";
     dbmigrations-postgresql-simple.url = "github:nuttycom/dbmigrations-postgresql-simple/d51bbc5a0b7d91f7c8a12fc28e5ecbe7ac326221";
     bippy.url = "github:aftok/bippy/e809e5a63a251b87d61d55bfc08a5a89c695ef8e";
-    lrzhs.url = "github:nuttycom/lrzhs/b10c8cc245f2353dfe3f5cbd6e231082a23ced7d";
+    lrzhs.url = "github:nuttycom/lrzhs/65ee43717492fe6f2e086c331439b9d61abcdfc7";
     purescript-overlay = {
       url = "github:thomashoneyman/purescript-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -27,65 +27,74 @@
     purescript-overlay,
     ...
   }: let
-    haskellPackagesOverlay = final: prev: let
+
+    haskell-overlay = final: prev: hfinal: hprev: let
       jailbreakUnbreak = pkg:
         final.haskell.lib.doJailbreak (pkg.overrideAttrs (_: {meta = {};}));
 
       dontCheck = pkg: final.haskell.lib.dontCheck pkg;
-
-      haskell-overlay = hfinal: hprev: {
-        base16 = jailbreakUnbreak hprev.base16;
-        murmur3 = jailbreakUnbreak hprev.murmur3;
-        secp256k1 = final.secp256k1;
-        haskoin-core = dontCheck (jailbreakUnbreak hprev.haskoin-core);
-        http-streams = dontCheck hprev.http-streams;
-        openssl-streams = dontCheck hprev.openssl-streams;
-        snap = dontCheck hprev.snap;
-
-        snaplet-postgresql-simple = jailbreakUnbreak hprev.snaplet-postgresql-simple;
-
-        dbmigrations = dbmigrations.defaultPackage.${final.system};
-        dbmigrations-postgresql-simple = dbmigrations-postgresql-simple.defaultPackage.${final.system};
-        # aftok-server = self.packages.${final.system}.aftok-server
-      };
     in {
-      haskellPackages = prev.haskellPackages.extend haskell-overlay;
+      #base16 = jailbreakUnbreak hprev.base16;
+      #murmur3 = jailbreakUnbreak hprev.murmur3;
+      #haskoin-core = dontCheck (jailbreakUnbreak hprev.haskoin-core);
+      #http-streams = dontCheck hprev.http-streams;
+      #openssl-streams = dontCheck hprev.openssl-streams;
+      #snap = dontCheck hprev.snap;
+
+      snaplet-postgresql-simple = jailbreakUnbreak hprev.snaplet-postgresql-simple;
+
+      dbmigrations = dbmigrations.defaultPackage;
+      dbmigrations-postgresql-simple = dbmigrations-postgresql-simple.defaultPackage;
+
+      aftok = hfinal.callCabal2nix "aftok" ./. {};
     };
-  in
-    flake-utils.lib.eachDefaultSystem (
+
+    overlay = final: prev: {
+      haskellPackages = prev.haskellPackages.extend (haskell-overlay final prev);
+    };
+  in 
+    {
+      overlays = {
+        default = overlay;
+      };
+    } 
+    // flake-utils.lib.eachDefaultSystem (
       system: let
         pkgs = import nixpkgs {
           inherit system;
           overlays = [
-            haskellPackagesOverlay
+            overlay
             purescript-overlay.overlays.default
             bippy.overlays.default
+            lrzhs.overlays.default
           ];
         };
-
-        hspkgs = pkgs.haskellPackages;
       in {
         packages = {
-          aftok-server = hspkgs.callCabal2nix "aftok" ./. {};
+          aftok = pkgs.haskellPackages.aftok;
           aftok-server-dockerImage = pkgs.dockerTools.buildImage {
             name = "aftok/aftok-server";
             tag = "latest";
             config = {
-              Entrypoint = ["${self.packages.${system}.aftok-server}/bin/aftok-server" "--conf=/etc/aftok/aftok-server.cfg"];
+              Entrypoint = ["${self.packages.${system}.aftok}/bin/aftok-server" "--conf=/etc/aftok/aftok-server.cfg"];
             };
           };
           default = self.packages.${system}.aftok-server-dockerImage;
         };
 
         devShells = {
-          server = hspkgs.shellFor {
+          default = self.devShells.${system}.server;
+
+          server = pkgs.haskellPackages.shellFor {
             name = "server-shell";
-            packages = _: [self.packages.${system}.aftok-server];
+            packages = _: [self.packages.${system}.aftok];
             buildInputs = [
               pkgs.cabal-install
-              hspkgs.ormolu
+              lrzhs.packages.${system}.lrzhs_ffi
+              pkgs.haskellPackages.ormolu
             ];
-            withHoogle = false;
+            inputsFrom = builtins.attrValues self.packages.${system};
+            withHoogle = true;
           };
 
           # adapted from example at https://github.com/thomashoneyman/purescript-overlay
@@ -97,7 +106,6 @@
               pkgs.purs-tidy-bin.purs-tidy-0_10_0
               pkgs.purs-backend-es
             ];
-            inputsFrom = builtins.attrValues self.packages.${system};
           };
         };
 
