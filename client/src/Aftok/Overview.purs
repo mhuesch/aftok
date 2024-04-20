@@ -13,12 +13,13 @@ import Data.Map as M
 import Data.Maybe (Maybe(..), maybe, isNothing)
 import Data.Unfoldable as U
 import Data.Newtype (unwrap)
-import Data.Symbol (SProxy(..))
 import Data.Traversable (traverse_)
 import Data.UUID (genUUID)
 import Effect.Aff (Aff)
 import Effect.Class (liftEffect)
 import Effect.Now (nowDateTime)
+import Type.Proxy (Proxy(..))
+
 import DOM.HTML.Indexed.ButtonType (ButtonType(..))
 import Halogen as H
 import Halogen.HTML.Core (ClassName(..))
@@ -52,6 +53,7 @@ data OverviewAction
   | ProjectSelected (Maybe ProjectId)
   | OpenCreateModal
   | OpenInviteModal ProjectId
+  | Pass
 
 type Slot id = forall query. H.Slot query ProjectList.Output id
 
@@ -61,9 +63,9 @@ type Slots =
   , invitationModal :: Invite.Slot Unit
   )
 
-_projectList = SProxy :: SProxy "projectList"
-_projectCreateModal = SProxy :: SProxy "projectCreateModal"
-_invitationModal = SProxy :: SProxy "invitationModal"
+_projectList = Proxy :: Proxy "projectList"
+_projectCreateModal = Proxy :: Proxy "projectCreateModal"
+_invitationModal = Proxy :: Proxy "invitationModal"
 
 type Capability (m :: Type -> Type) =
   { getProjectDetail :: ProjectId -> m (Either APIError (Maybe ProjectDetail))
@@ -77,7 +79,7 @@ component
   => System m
   -> Capability m
   -> ProjectList.Capability m
-  -> H.Component HH.HTML query OverviewInput ProjectList.Output m
+  -> H.Component query OverviewInput ProjectList.Output m
 component system caps pcaps =
   H.mkComponent
     { initialState
@@ -115,14 +117,14 @@ component system caps pcaps =
                   unit
                   (ProjectList.component system pcaps)
                   st.selectedProject
-                  (Just <<< (\(ProjectList.ProjectChange p) -> ProjectSelected (Just p)))
+                  (\(ProjectList.ProjectChange p) -> ProjectSelected (Just p))
               , system.portal
                   _projectCreateModal
                   unit
                   (Create.component system caps.createCaps)
                   unit
                   Nothing
-                  (Just <<< (\(Create.ProjectCreated p) -> ProjectSelected (Just p)))
+                  (\(Create.ProjectCreated p) -> ProjectSelected (Just p))
               ]
           , HH.div
               [ P.classes (ClassName <$> if isNothing st.selectedProject then [ "collapse" ] else []) ]
@@ -132,7 +134,7 @@ component system caps pcaps =
               [ HH.button
                   [ P.classes [ C.btn, C.btnPrimary ]
                   , P.type_ ButtonButton
-                  , E.onClick (\_ -> Just OpenCreateModal)
+                  , E.onClick (\_ -> OpenCreateModal)
                   ]
                   [ HH.text "Create a new project" ]
               ]
@@ -146,7 +148,7 @@ component system caps pcaps =
     HH.div
       [ P.classes (ClassName <$> [ "container-fluid" ]) ]
       [ HH.section
-          [ P.id_ "projectOverview", P.classes (ClassName <$> [ "pt-3" ]) ]
+          [ P.id "projectOverview", P.classes (ClassName <$> [ "pt-3" ]) ]
           [ HH.div
               -- header
               [ P.classes (ClassName <$> [ "row", "pt-3", "font-weight-bold" ]) ]
@@ -167,7 +169,7 @@ component system caps pcaps =
               )
           ]
       , HH.section
-          [ P.id_ "contributors" ]
+          [ P.id "contributors" ]
           ( [ HH.div
                 -- header
                 [ P.classes (ClassName <$> [ "row", "pt-3", "font-weight-bold" ]) ]
@@ -194,7 +196,7 @@ component system caps pcaps =
                         [ HH.button
                             [ P.classes [ C.btn, C.btnPrimary ]
                             , P.type_ ButtonButton
-                            , E.onClick (\_ -> Just (OpenInviteModal project.projectId))
+                            , E.onClick (\_ -> OpenInviteModal project.projectId)
                             ]
                             [ HH.text "Invite a collaborator" ]
                         ]
@@ -204,7 +206,7 @@ component system caps pcaps =
                         (Invite.component system caps.invitationCaps)
                         unit
                         Nothing
-                        (const Nothing)
+                        (const Pass)
                     ]
                 ]
           )
@@ -246,13 +248,14 @@ component system caps pcaps =
         currentProject <- H.gets (_.selectedProject)
         traverse_ setProjectDetail currentProject
       OpenCreateModal -> do
-        void <<< H.query _projectCreateModal unit $ H.tell (Create.OpenModal)
+        H.tell _projectCreateModal unit (Create.OpenModal)
       OpenInviteModal pid -> do
-        void <<< H.query _invitationModal unit $ H.tell (Invite.OpenModal pid)
+        H.tell _invitationModal unit (Invite.OpenModal pid)
       ProjectSelected pidMay -> do
         currentProject <- H.gets (_.selectedProject)
         when (currentProject /= pidMay)
           $ traverse_ projectSelected pidMay
+      Pass -> pure unit
     where
     projectSelected pid = do
       H.modify_ (_ { selectedProject = Just pid })

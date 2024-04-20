@@ -54,7 +54,7 @@ component
    . Monad m
   => System m
   -> Capability m
-  -> H.Component HH.HTML Query Input Output m
+  -> H.Component Query Input Output m
 component console caps =
   H.mkComponent
     { initialState
@@ -83,8 +83,8 @@ component console caps =
           [ HH.text "Project" ]
       , HH.select
           [ P.classes (ClassName <$> [ "form-control" ])
-          , P.id_ "projectSelect"
-          , E.onSelectedIndexChange (Just <<< Select)
+          , P.id "projectSelect"
+          , E.onSelectedIndexChange Select
           ]
           ( [ HH.option [ P.selected (isNothing st.selectedPid), P.disabled true ] [ HH.text "Select a project" ] ]
               <> map renderOption st.projects

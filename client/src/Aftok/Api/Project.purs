@@ -26,6 +26,7 @@ import Foreign.Object (Object)
 import Affjax (get, post)
 import Affjax.ResponseFormat as RF
 import Affjax.RequestBody as RB
+import Affjax.Web (driver)
 import Aftok.Types
   ( UserId
   , ProjectId
@@ -56,7 +57,7 @@ instance decodeDepreciationFn :: DecodeJson DepreciationFn where
         undep <- Days <$> args .: "undep"
         dep <- Days <$> args .: "dep"
         pure $ LinearDepreciation { undep, dep }
-      other -> Left $ UnexpectedValue (fromString dtype)
+      _ -> Left $ UnexpectedValue (fromString dtype)
 
 newtype Project' date = Project'
   { projectId :: ProjectId
@@ -173,7 +174,7 @@ parseProjectDetail pid json = do
 
 listProjects :: Aff (Either APIError (Array Project))
 listProjects = do
-  response <- get RF.json "/api/projects"
+  response <- get driver RF.json "/api/projects"
   EC.liftEffect
     <<< runExceptT
     <<< map decompose
@@ -182,7 +183,7 @@ listProjects = do
 
 getProjectDetail :: ProjectId -> Aff (Either APIError (Maybe ProjectDetail))
 getProjectDetail pid = do
-  response <- get RF.json ("/api/projects/" <> pidStr pid <> "/detail")
+  response <- get driver RF.json ("/api/projects/" <> pidStr pid <> "/detail")
   let
     parsed :: ExceptT APIError Effect (Maybe (ProjectDetail' Instant))
     parsed = parseDatedResponseMay (parseProjectDetail pid) response
@@ -221,7 +222,7 @@ invite :: ProjectId -> Invitation -> Aff (Either APIError (Maybe Zip321Request))
 invite pid inv = do
   let inv' = inv { inviteBy = encodeInviteBy inv.inviteBy }
   let body = RB.json $ encodeInvitation inv'
-  response <- post RF.json ("/api/projects/" <> pidStr pid <> "/invite") (Just body)
+  response <- post driver RF.json ("/api/projects/" <> pidStr pid <> "/invite") (Just body)
   map (\r -> Zip321Request <$> r.zip321_request) <$> parseResponse decodeInvResult response
 
 type ProjectCreateRequest =
@@ -248,5 +249,5 @@ decodeProjectId json = (_ .: "projectId") =<< decodeJson json
 createProject :: ProjectCreateRequest -> Aff (Either APIError ProjectId)
 createProject pc = do
   let body = RB.json $ encodeProjectCreateRequest pc
-  response <- post RF.json "/api/projects/" (Just body)
+  response <- post driver RF.json "/api/projects/" (Just body)
   parseResponse decodeProjectId response

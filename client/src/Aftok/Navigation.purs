@@ -19,7 +19,7 @@ import URI.Extra.QueryPairs as QueryPairs
 import URI.Fragment (Fragment)
 import URI.HostPortPair as HostPortPair
 import URI.HostPortPair (HostPortPair)
-import Text.Parsing.Parser (runParser, ParseError)
+import Parsing (runParser, ParseError)
 
 parseURIQuery :: String -> Either ParseError (Maybe (QueryPairs Key Value))
 parseURIQuery uriStr =

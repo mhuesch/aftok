@@ -5,11 +5,12 @@ import Control.Monad.Trans.Class (lift)
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..), isNothing)
 import Data.Unfoldable as U
-import Data.Symbol (SProxy(..))
 import Data.Traversable (traverse_)
 import Data.Tuple (Tuple(..))
-import DOM.HTML.Indexed.ButtonType (ButtonType(..))
 import Effect.Aff (Aff)
+import Type.Proxy (Proxy(..))
+
+import DOM.HTML.Indexed.ButtonType (ButtonType(..))
 import Halogen as H
 import Halogen.HTML.Core (ClassName(..))
 import Halogen.HTML as HH
@@ -46,6 +47,7 @@ data BillingAction
   | OpenBillableModal ProjectId
   | BillableCreated BillableId
   | OpenPaymentRequestModal ProjectId BillableId
+  | Pass
 
 type Slot id = forall query. H.Slot query ProjectList.Output id
 
@@ -55,9 +57,9 @@ type Slots =
   , createPaymentRequest :: PaymentRequest.Slot Unit
   )
 
-_projectList = SProxy :: SProxy "projectList"
-_createBillable = SProxy :: SProxy "createBillable"
-_createPaymentRequest = SProxy :: SProxy "createPaymentRequest"
+_projectList = Proxy :: Proxy "projectList"
+_createBillable = Proxy :: Proxy "createBillable"
+_createPaymentRequest = Proxy :: Proxy "createPaymentRequest"
 
 type Capability (m :: Type -> Type) =
   { createBillable :: Create.Capability m
@@ -72,7 +74,7 @@ component
   => System m
   -> Capability m
   -> ProjectList.Capability m
-  -> H.Component HH.HTML query BillingInput ProjectList.Output m
+  -> H.Component query BillingInput ProjectList.Output m
 component system caps pcaps =
   H.mkComponent
     { initialState
@@ -111,7 +113,7 @@ component system caps pcaps =
                   unit
                   (ProjectList.component system pcaps)
                   st.selectedProject
-                  (Just <<< (\(ProjectList.ProjectChange p) -> ProjectSelected (Just p)))
+                  (\(ProjectList.ProjectChange p) -> ProjectSelected (Just p))
               ]
           , HH.div
               [ P.classes (ClassName <$> if isNothing st.selectedProject then [ "collapse" ] else []) ]
@@ -123,7 +125,7 @@ component system caps pcaps =
                         [ HH.button
                             [ P.classes [ C.btn, C.btnPrimary ]
                             , P.type_ ButtonButton
-                            , E.onClick (\_ -> Just (OpenBillableModal pid))
+                            , E.onClick (\_ -> OpenBillableModal pid)
                             ]
                             [ HH.text "Create billable" ]
                         ]
@@ -133,14 +135,14 @@ component system caps pcaps =
                         (Create.component system caps.createBillable)
                         unit
                         Nothing
-                        (\(Create.BillableCreated bid) -> Just (BillableCreated bid))
+                        (\(Create.BillableCreated bid) -> BillableCreated bid)
                     , system.portal
                         _createPaymentRequest
                         unit
                         (PaymentRequest.component system caps.createPaymentRequest)
                         unit
                         Nothing
-                        (const Nothing)
+                        (\_ -> Pass)
                     ]
                   Nothing -> []
               )
@@ -152,7 +154,7 @@ component system caps pcaps =
     HH.div
       [ P.classes (ClassName <$> [ "container-fluid" ]) ]
       [ HH.section
-          [ P.id_ "projectOverview", P.classes (ClassName <$> [ "pt-3" ]) ]
+          [ P.id "projectOverview", P.classes (ClassName <$> [ "pt-3" ]) ]
           ( [ HH.div
                 -- header
                 [ P.classes (ClassName <$> [ "row", "pt-3", "font-weight-bold" ]) ]
@@ -178,7 +180,7 @@ component system caps pcaps =
             [ HH.button
                 [ P.classes [ C.btn, C.btnPrimary, C.btnSmall ]
                 , P.type_ ButtonButton
-                , E.onClick (\_ -> Just $ OpenPaymentRequestModal pid bid)
+                , E.onClick (\_ -> OpenPaymentRequestModal pid bid)
                 ]
                 [ HH.text "New payment request" ]
             ]
@@ -204,14 +206,16 @@ component system caps pcaps =
           $ traverse_ projectSelected pidMay
 
       OpenBillableModal pid -> do
-        void $ H.query _createBillable unit $ H.tell (Create.OpenModal pid)
+        H.tell _createBillable unit (Create.OpenModal pid)
 
       BillableCreated _ -> do
         currentPid <- H.gets (_.selectedProject)
         traverse_ refreshBillables currentPid
 
       OpenPaymentRequestModal pid bid -> do
-        void $ H.query _createPaymentRequest unit $ H.tell (PaymentRequest.OpenModal pid bid)
+        H.tell _createPaymentRequest unit (PaymentRequest.OpenModal pid bid)
+
+      Pass -> pure unit
 
     where
     projectSelected pid = do

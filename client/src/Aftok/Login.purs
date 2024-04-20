@@ -46,7 +46,7 @@ component
    . Monad m
   => System m
   -> Capability m
-  -> H.Component HH.HTML query input LoginResult m
+  -> H.Component query input LoginResult m
 component system caps =
   H.mkComponent
     { initialState
@@ -79,7 +79,7 @@ component system caps =
                       [ HH.text "Sign In" ]
                   , HH.form
                       [ P.classes (ClassName <$> [ "mb-6" ])
-                      , E.onSubmit (Just <<< Login)
+                      , E.onSubmit Login
                       ]
                       [ HH.div
                           [ P.classes (ClassName <$> [ "form-group" ]) ]
@@ -91,12 +91,12 @@ component system caps =
                           , HH.input
                               [ P.type_ P.InputText
                               , P.classes (ClassName <$> [ "form-control" ])
-                              , P.id_ "modalSigninHorizontalUsername"
+                              , P.id "modalSigninHorizontalUsername"
                               , P.placeholder "Username"
                               , P.required true
                               , P.autofocus true
                               , P.value st.username
-                              , E.onValueInput (Just <<< SetUsername)
+                              , E.onValueInput SetUsername
                               ]
                           ]
                       , HH.div
@@ -109,11 +109,11 @@ component system caps =
                           , HH.input
                               [ P.type_ P.InputPassword
                               , P.classes (ClassName <$> [ "form-control" ])
-                              , P.id_ "modalSigninHorizontalPassword"
+                              , P.id "modalSigninHorizontalPassword"
                               , P.placeholder "Password"
                               , P.required true
                               , P.value st.password
-                              , E.onValueInput (Just <<< SetPassword)
+                              , E.onValueInput SetPassword
                               ]
                           ]
                       , case st.loginError of

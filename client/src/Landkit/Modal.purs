@@ -14,7 +14,7 @@ component
 component children =
   HH.div
     [ P.classes (ClassName <$> [ "modal", "fade" ])
-    , P.id_ "modalSigninHorizontal" -- TODO: is this needed? is this bootstrap magic?
+    , P.id "modalSigninHorizontal" -- TODO: is this needed? is this bootstrap magic?
     , P.tabIndex (-1)
     -- , P.role "dialog"
     -- , P.labelledby "modalSigninHorizontalTitle"

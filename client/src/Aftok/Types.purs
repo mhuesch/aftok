@@ -10,7 +10,7 @@ import Data.Enum (fromEnum)
 import Data.JSDate as JD
 import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype)
-import Data.Symbol (class IsSymbol, SProxy)
+import Data.Symbol (class IsSymbol)
 import Data.Tuple (Tuple(..))
 import Data.UUID (UUID, toString, parseUUID)
 import Effect (Effect)
@@ -19,13 +19,13 @@ import Effect.Class (liftEffect)
 import Effect.Now (now, nowDateTime)
 import Effect.Class.Console as C
 import Type.Row as Row
+import Type.Proxy (Proxy)
 import Web.Event.Event as WE
 import Web.HTML (HTMLElement, window)
 import Web.HTML.Window (location)
 import Web.HTML.Location (href)
 import Routing.Hash as RH
 import Halogen as H
-import Halogen.HTML as HH
 import Halogen.Portal (portalAff)
 import Aftok.Modals.ModalFFI as ModalFFI
 import Aftok.HTML.QRious as QRious
@@ -46,12 +46,12 @@ type System m =
       => IsSymbol label
       => Ord slot
       => Monad m
-      => SProxy label
+      => Proxy label
       -> slot
-      -> H.Component HH.HTML query input output m
+      -> H.Component query input output m
       -> input
       -> Maybe HTMLElement
-      -> (output -> Maybe action)
+      -> (output -> action)
       -> H.ComponentHTML action slots m
   , toggleModal :: String -> ModalFFI.Toggle -> m Unit
   , renderQR :: QRious.QROpts -> m String

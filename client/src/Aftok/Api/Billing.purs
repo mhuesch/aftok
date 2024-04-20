@@ -32,6 +32,7 @@ import Foreign.Object (Object)
 import Affjax (post, get)
 import Affjax.RequestBody as RB
 import Affjax.ResponseFormat as RF
+import Affjax.Web (driver)
 -- import Affjax.StatusCode (StatusCode(..))
 import Aftok.Types
   ( ProjectId
@@ -148,12 +149,12 @@ parseBillableJSON obj = do
 createBillable :: ProjectId -> Billable -> Aff (Either APIError BillableId)
 createBillable pid billable = do
   let body = RB.json $ billableJSON billable
-  response <- post RF.json ("/api/projects/" <> pidStr pid <> "/billables") (Just body)
+  response <- post driver RF.json ("/api/projects/" <> pidStr pid <> "/billables") (Just body)
   parseResponse decodeJson response
 
 listProjectBillables :: ProjectId -> Aff (Either APIError (Array (Tuple BillableId Billable)))
 listProjectBillables pid = do
-  response <- get RF.json ("/api/projects/" <> pidStr pid <> "/billables")
+  response <- get driver RF.json ("/api/projects/" <> pidStr pid <> "/billables")
   parseResponse (traverse parseBillableJSON <=< decodeJson) response
 
 newtype PaymentRequestId = PaymentRequestId UUID
@@ -218,7 +219,7 @@ createPaymentRequest pid bid m = do
   let
     body = RB.json (encodeJson m)
     uri = "/api/projects/" <> pidStr pid <> "/billables/" <> billableIdStr bid <> "/paymentRequests"
-  response <- post RF.json uri (Just body)
+  response <- post driver RF.json uri (Just body)
   liftEffect
     <<< runExceptT
     <<< map (map toDateTime)
@@ -227,5 +228,5 @@ createPaymentRequest pid bid m = do
 listUnpaidPaymentRequests
   :: BillableId
   -> Aff (Either APIError (Array (Tuple PaymentRequestId PaymentRequest)))
-listUnpaidPaymentRequests billId = pure $ Left Forbidden
+listUnpaidPaymentRequests _ = pure $ Left Forbidden
 

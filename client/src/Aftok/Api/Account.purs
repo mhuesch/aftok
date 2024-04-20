@@ -11,6 +11,7 @@ import Affjax (post, get, printError)
 import Affjax.StatusCode (StatusCode(..))
 import Affjax.RequestBody as RB
 import Affjax.ResponseFormat as RF
+import Affjax.Web (driver)
 
 type LoginRequest = { username :: String, password :: String }
 
@@ -23,7 +24,7 @@ data LoginResponse
 login :: String -> String -> Aff LoginResponse
 login user pass = do
   log "Sending login request to /api/login ..."
-  result <- post RF.ignore "/api/login" (Just <<< RB.Json <<< encodeJson $ { username: user, password: pass })
+  result <- post driver RF.ignore "/api/login" (Just <<< RB.Json <<< encodeJson $ { username: user, password: pass })
   case result of
     Left err -> log ("Login failed: " <> printError err)
     Right r -> log ("Login status: " <> show r.status)
@@ -37,7 +38,7 @@ login user pass = do
 
 checkLogin :: Aff LoginResponse
 checkLogin = do
-  result <- get RF.ignore "/api/login/check"
+  result <- get driver RF.ignore "/api/login/check"
   case result of
     Left err -> do
       pure $ LoginError { status: Nothing, message: printError err }
@@ -48,7 +49,7 @@ checkLogin = do
             StatusCode _ -> LoginForbidden
 
 logout :: Aff Unit
-logout = void $ get RF.ignore "/api/logout"
+logout = void $ get driver RF.ignore "/api/logout"
 
 data RecoverBy
   = RecoverByEmail String
@@ -90,23 +91,23 @@ data ZAddrCheckResponse
 
 checkUsername :: String -> Aff UsernameCheckResponse
 checkUsername uname = do
-  result <- get RF.ignore ("/api/validate_username?username=" <> uname)
+  result <- get driver RF.ignore ("/api/validate_username?username=" <> uname)
   pure
     $ case result of
-        Left err -> UsernameCheckTaken
+        Left _ -> UsernameCheckTaken
         Right r
           | r.status == StatusCode 200 -> UsernameCheckOK
-        Right r -> UsernameCheckTaken
+        Right _ -> UsernameCheckTaken
 
 checkZAddr :: String -> Aff ZAddrCheckResponse
 checkZAddr zaddr = do
-  result <- get RF.ignore ("/api/validate_zaddr?zaddr=" <> zaddr)
+  result <- get driver RF.ignore ("/api/validate_zaddr?zaddr=" <> zaddr)
   pure
     $ case result of
-        Left err -> ZAddrCheckInvalid
+        Left _ -> ZAddrCheckInvalid
         Right r
           | r.status == StatusCode 200 -> ZAddrCheckValid
-        Right r -> ZAddrCheckInvalid
+        Right _ -> ZAddrCheckInvalid
 
 signup :: SignupRequest -> Aff SignupResponse
 signup req = do
@@ -132,7 +133,7 @@ signup req = do
           , invitation_codes: req.invitationCodes
           }
   log ("Sending JSON request: " <> stringify signupJSON)
-  result <- post RF.ignore "/api/register" (Just <<< RB.Json $ signupJSON)
+  result <- post driver RF.ignore "/api/register" (Just <<< RB.Json $ signupJSON)
   case result of
     Left err -> do
       log ("Registration failed: " <> printError err)

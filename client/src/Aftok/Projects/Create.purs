@@ -63,7 +63,7 @@ component
    . Monad m
   => System m
   -> Capability m
-  -> H.Component HH.HTML Query input Output m
+  -> H.Component Query input Output m
 component system caps =
   H.mkComponent
     { initialState: const initialState
@@ -87,7 +87,7 @@ component system caps =
   render st =
     HH.div
       [ P.classes [ C.modal ]
-      , P.id_ modalId
+      , P.id modalId
       , P.tabIndex (negate 1)
       , ARIA.role "dialog"
       , ARIA.labelledBy (modalId <> "Title")
@@ -99,12 +99,12 @@ component system caps =
               [ P.classes [ C.modalContent ] ]
               [ HH.div
                   [ P.classes [ C.modalHeader ] ]
-                  [ HH.h5 [ P.classes [ C.modalTitle ], P.id_ (modalId <> "Title") ] [ HH.text "Create a new project" ]
+                  [ HH.h5 [ P.classes [ C.modalTitle ], P.id (modalId <> "Title") ] [ HH.text "Create a new project" ]
                   , HH.button
                       [ P.classes [ C.close ]
                       , ARIA.label "Close"
                       , P.type_ ButtonButton
-                      , E.onClick (\_ -> Just Close)
+                      , E.onClick (\_ -> Close)
                       ]
                       [ HH.span [ ARIA.hidden "true" ] [ HH.text "×" ] ]
                   ]
@@ -119,9 +119,9 @@ component system caps =
                           , HH.input
                               [ P.type_ P.InputText
                               , P.classes [ C.formControl, C.formControlSm ]
-                              , P.id_ "projectName"
+                              , P.id "projectName"
                               , P.placeholder "My awesome new project!!!"
-                              , E.onValueInput (Just <<< SetName)
+                              , E.onValueInput SetName
                               ]
                           ]
                       , formGroup st
@@ -132,9 +132,9 @@ component system caps =
                           , HH.input
                               [ P.type_ P.InputNumber
                               , P.classes [ C.formControl, C.formControlXs, C.formControlFlush, C.marginX2 ]
-                              , P.id_ "undepDays"
+                              , P.id "undepDays"
                               , P.placeholder "180"
-                              , E.onValueInput (Just <<< SetUndepDays)
+                              , E.onValueInput SetUndepDays
                               ]
                           ]
                       , formGroup st
@@ -145,9 +145,9 @@ component system caps =
                           , HH.input
                               [ P.type_ P.InputNumber
                               , P.classes [ C.formControl, C.formControlXs, C.formControlFlush, C.marginX2 ]
-                              , P.id_ "undepDays"
+                              , P.id "undepDays"
                               , P.placeholder "1800"
-                              , E.onValueInput (Just <<< SetDepDays)
+                              , E.onValueInput SetDepDays
                               ]
                           ]
                       ]
@@ -157,13 +157,13 @@ component system caps =
                   [ HH.button
                       [ P.type_ ButtonButton
                       , P.classes [ C.btn, C.btnSecondary ]
-                      , E.onClick (\_ -> Just Close)
+                      , E.onClick (\_ -> Close)
                       ]
                       [ HH.text "Close" ]
                   , HH.button
                       [ P.type_ ButtonButton
                       , P.classes [ C.btn, C.btnPrimary ]
-                      , E.onClick (\_ -> Just Save)
+                      , E.onClick (\_ -> Save)
                       ]
                       [ HH.text "Create project" ]
                   ]

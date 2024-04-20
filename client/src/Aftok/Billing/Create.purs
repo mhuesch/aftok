@@ -95,7 +95,7 @@ component
    . Monad m
   => System m
   -> Capability m
-  -> H.Component HH.HTML Query input Output m
+  -> H.Component Query input Output m
 component system caps =
   H.mkComponent
     { initialState: const initialState
@@ -125,7 +125,7 @@ component system caps =
   render st =
     HH.div
       [ P.classes [ C.modal ]
-      , P.id_ modalId
+      , P.id modalId
       , P.tabIndex (negate 1)
       , ARIA.role "dialog"
       , ARIA.labelledBy (modalId <> "Title")
@@ -137,12 +137,12 @@ component system caps =
               [ P.classes [ C.modalContent ] ]
               [ HH.div
                   [ P.classes [ C.modalHeader ] ]
-                  [ HH.h5 [ P.classes [ C.modalTitle ], P.id_ (modalId <> "Title") ] [ HH.text "Create a new billable item" ]
+                  [ HH.h5 [ P.classes [ C.modalTitle ], P.id (modalId <> "Title") ] [ HH.text "Create a new billable item" ]
                   , HH.button
                       [ P.classes [ C.close ]
                       , ARIA.label "Close"
                       , P.type_ ButtonButton
-                      , E.onClick (\_ -> Just Close)
+                      , E.onClick (\_ -> Close)
                       ]
                       [ HH.span [ ARIA.hidden "true" ] [ HH.text "×" ] ]
                   ]
@@ -157,9 +157,9 @@ component system caps =
                           , HH.input
                               [ P.type_ P.InputText
                               , P.classes [ C.formControl, C.formControlSm ]
-                              , P.id_ "billableName"
+                              , P.id "billableName"
                               , P.placeholder "A name for the product or service you want to bill for"
-                              , E.onValueInput (Just <<< SetName)
+                              , E.onValueInput SetName
                               ]
                           ]
                       , formGroup st
@@ -170,9 +170,9 @@ component system caps =
                           , HH.input
                               [ P.type_ P.InputText
                               , P.classes [ C.formControl, C.formControlSm ]
-                              , P.id_ "billableDesc"
+                              , P.id "billableDesc"
                               , P.placeholder "Description of the product or service"
-                              , E.onValueInput (Just <<< SetDesc)
+                              , E.onValueInput SetDesc
                               ]
                           ]
                       , formGroup st
@@ -183,9 +183,9 @@ component system caps =
                           , HH.input
                               [ P.type_ P.InputText
                               , P.classes [ C.formControl, C.formControlSm ]
-                              , P.id_ "billableMsg"
+                              , P.id "billableMsg"
                               , P.placeholder "Enter your message here"
-                              , E.onValueInput (Just <<< SetMessage)
+                              , E.onValueInput SetMessage
                               ]
                           ]
                       , formGroup st
@@ -195,14 +195,14 @@ component system caps =
                               , checked: (st.recurrenceType == RTAnnual)
                               , labelClasses: []
                               }
-                              (\_ -> Just (SetRecurrenceType RTAnnual))
+                              (\_ -> SetRecurrenceType RTAnnual)
                               [ HH.text "Annual" ]
                           , formCheckGroup
                               { id: "recurMonthly"
                               , checked: (st.recurrenceType == RTMonthly)
                               , labelClasses: [ C.formInline ]
                               }
-                              (\_ -> Just (SetRecurrenceType RTMonthly))
+                              (\_ -> SetRecurrenceType RTMonthly)
                               [ HH.text "Every"
                               , HH.input
                                   [ P.type_ P.InputNumber
@@ -213,7 +213,7 @@ component system caps =
                                       )
                                   , P.min 1.0
                                   , P.max 12.0
-                                  , E.onValueInput (Just <<< SetRecurrenceMonths)
+                                  , E.onValueInput SetRecurrenceMonths
                                   ]
                               , HH.text "Months"
                               ]
@@ -222,7 +222,7 @@ component system caps =
                               , checked: (st.recurrenceType == RTWeekly)
                               , labelClasses: [ C.formInline ]
                               }
-                              (\_ -> Just (SetRecurrenceType RTWeekly))
+                              (\_ -> SetRecurrenceType RTWeekly)
                               [ HH.text "Every"
                               , HH.input
                                   [ P.type_ P.InputNumber
@@ -233,7 +233,7 @@ component system caps =
                                       )
                                   , P.min 1.0
                                   , P.max 12.0
-                                  , E.onValueInput (Just <<< SetRecurrenceWeeks)
+                                  , E.onValueInput SetRecurrenceWeeks
                                   ]
                               , HH.text "Weeks"
                               ]
@@ -242,7 +242,7 @@ component system caps =
                               , checked: st.recurrenceType == RTOneTime
                               , labelClasses: []
                               }
-                              (\_ -> Just (SetRecurrenceType RTOneTime))
+                              (\_ -> SetRecurrenceType RTOneTime)
                               [ HH.text "One-Time" ]
                           ]
                       , formGroup st
@@ -255,11 +255,11 @@ component system caps =
                               [ HH.input
                                   [ P.type_ P.InputNumber
                                   , P.classes [ C.formControl ]
-                                  , P.id_ "billableAmount"
+                                  , P.id "billableAmount"
                                   , P.value (fromMaybe "" st.amount)
                                   , P.placeholder "1.0"
                                   , P.min 0.0
-                                  , E.onValueInput (Just <<< SetBillingAmount)
+                                  , E.onValueInput SetBillingAmount
                                   ]
                               , HH.div
                                   [ P.classes [ ClassName "input-group-append" ] ]
@@ -278,12 +278,12 @@ component system caps =
                               [ HH.text "Grace Period (Days)" ]
                           , HH.input
                               [ P.type_ P.InputNumber
-                              , P.id_ "gracePeriod"
+                              , P.id "gracePeriod"
                               , P.classes [ C.formControl, C.formControlSm ]
                               , P.value (maybe "" (Number.toString <<< unwrap) st.gracePeriod)
                               , P.placeholder "Days until a bill is considered overdue"
                               , P.min 0.0
-                              , E.onValueInput (Just <<< SetGracePeriod)
+                              , E.onValueInput SetGracePeriod
                               ]
                           ]
                       , formGroup st
@@ -293,12 +293,12 @@ component system caps =
                               [ HH.text "Request Expiry Period (Hours)" ]
                           , HH.input
                               [ P.type_ P.InputNumber
-                              , P.id_ "gracePeriod"
+                              , P.id "gracePeriod"
                               , P.classes [ C.formControl, C.formControlSm ]
                               , P.value (maybe "" (Number.toString <<< unwrap) st.requestExpiry)
                               , P.placeholder "Hours until a payment request expires"
                               , P.min 0.0
-                              , E.onValueInput (Just <<< SetRequestExpiry)
+                              , E.onValueInput SetRequestExpiry
                               ]
                           ]
                       ]
@@ -309,13 +309,13 @@ component system caps =
                   [ HH.button
                       [ P.type_ ButtonButton
                       , P.classes [ C.btn, C.btnSecondary ]
-                      , E.onClick (\_ -> Just Close)
+                      , E.onClick (\_ -> Close)
                       ]
                       [ HH.text "Close" ]
                   , HH.button
                       [ P.type_ ButtonButton
                       , P.classes [ C.btn, C.btnPrimary ]
-                      , E.onClick (\_ -> Just Save)
+                      , E.onClick (\_ -> Save)
                       ]
                       [ HH.text "Create billable" ]
                   ]
@@ -335,7 +335,7 @@ component system caps =
        , checked :: Boolean
        , labelClasses :: Array ClassName
        }
-    -> (Unit -> Maybe a)
+    -> (Unit -> a)
     -> Array (HH.HTML i a)
     -> HH.HTML i a
   formCheckGroup { id, checked, labelClasses } onChange children =
@@ -345,7 +345,7 @@ component system caps =
           ( [ P.type_ P.InputRadio
             , P.name "recurType"
             , P.classes [ C.formCheckInput ]
-            , P.id_ id
+            , P.id id
             , E.onClick \_ -> onChange unit
             ] <> (if checked then [ P.checked true ] else [])
           )

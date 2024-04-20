@@ -3,9 +3,9 @@ module Aftok.Signup where
 import Prelude
 import Control.Monad.Trans.Class (lift)
 import Data.Bifunctor (bimap)
-import Data.Either (Either(..), note, fromRight)
+import Data.Either (Either(..), note, hush)
 import Data.Foldable (any, intercalate)
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, fromJust)
 import Data.Map as M
 import Data.String.Regex (regex, split)
 import Data.String.Regex.Flags (global)
@@ -104,7 +104,7 @@ component
   => System m
   -> Capability m
   -> Config
-  -> H.Component HH.HTML query input SignupResult m
+  -> H.Component query input SignupResult m
 component system caps conf =
   H.mkComponent
     { initialState
@@ -145,7 +145,7 @@ component system caps conf =
                   [ P.classes (ClassName <$> [ "col-12", "col-lg-4", "py-8", "py-md-0" ]) ]
                   [ HH.form
                       [ P.classes (ClassName <$> [ "mb-6" ])
-                      , E.onSubmit (Just <<< Signup)
+                      , E.onSubmit Signup
                       ]
                       [ HH.div
                           [ P.classes (ClassName <$> [ "form-group" ]) ]
@@ -154,12 +154,12 @@ component system caps conf =
                             , HH.input
                                 [ P.type_ P.InputText
                                 , P.classes (ClassName <$> [ "form-control" ])
-                                , P.id_ "username"
+                                , P.id "username"
                                 , P.placeholder "Choose a handle (username)"
                                 , P.required true
                                 , P.autofocus true
                                 , P.value (fromMaybe "" st.username)
-                                , E.onValueInput (Just <<< SetUsername)
+                                , E.onValueInput SetUsername
                                 ]
                             ]
                               <> signupErrors st UsernameField
@@ -170,11 +170,11 @@ component system caps conf =
                             , HH.input
                                 [ P.type_ P.InputPassword
                                 , P.classes (ClassName <$> [ "form-control" ])
-                                , P.id_ "password"
+                                , P.id "password"
                                 , P.placeholder "Enter a unique password"
                                 , P.required true
                                 , P.value (fromMaybe "" st.password)
-                                , E.onValueInput (Just <<< SetPassword)
+                                , E.onValueInput SetPassword
                                 ]
                             ]
                               <> signupErrors st PasswordField
@@ -182,11 +182,11 @@ component system caps conf =
                                 [ HH.input
                                     [ P.type_ P.InputPassword
                                     , P.classes (ClassName <$> [ "form-control" ])
-                                    , P.id_ "passwordConfirm"
+                                    , P.id "passwordConfirm"
                                     , P.placeholder "Enter a unique password"
                                     , P.required true
                                     , P.value (fromMaybe "" st.passwordConfirm)
-                                    , E.onValueInput (Just <<< ConfirmPassword)
+                                    , E.onValueInput ConfirmPassword
                                     ]
                                 ]
                               <> signupErrors st ConfirmField
@@ -201,15 +201,15 @@ component system caps conf =
                           , HH.input
                               [ P.type_ P.InputText
                               , P.classes (ClassName <$> [ "form-control" ])
-                              , P.id_ "invitationCodes"
+                              , P.id "invitationCodes"
                               , P.placeholder "abcdefgh, ..."
                               , P.value (intercalate ", " st.invitationCodes)
-                              , E.onValueInput (Just <<< SetInvitationCodes)
+                              , E.onValueInput SetInvitationCodes
                               ]
                           ] <> signupErrors st InvCodesField
                       , HH.div
                           [ P.classes (ClassName <$> [ "form-group", "mb-3" ]) ]
-                          [ HH.div [ P.id_ "grecaptcha" ] [] ]
+                          [ HH.div [ P.id "grecaptcha" ] [] ]
                       , HH.button
                           [ P.classes (ClassName <$> [ "btn", "btn-block", "btn-primary" ]) ]
                           [ HH.text "Sign up" ]
@@ -247,7 +247,7 @@ component system caps conf =
           traverse_ setZAddr (join $ M.lookup "zaddr" pairsMap)
         (Right Nothing) -> pure unit
         (Left err) ->
-          lift $ system.error ("Parsing failed for location string " <> loc)
+          lift $ system.error ("Parsing failed for location string " <> loc <> ": " <> show err)
       lift $ caps.recaptchaRender conf.recaptchaKey "grecaptcha"
     SetUsername user -> do
       ures <- lift $ caps.checkUsername user
@@ -279,12 +279,12 @@ component system caps conf =
       when (addr /= "") (setZAddr addr)
     SetInvitationCodes codeStr -> do
       let
-        r = unsafePartial (fromRight $ regex "\\s*,\\s*" global)
+        r = unsafePartial (fromJust <<< hush $ regex "\\s*,\\s*" global)
         codes = split r codeStr
       H.modify_ (_ { invitationCodes = codes })
     Signup ev -> do
       lift $ system.preventDefault ev
-      recType <- H.gets (_.channel)
+      -- recType <- H.gets (_.channel)
       usernameV <- V <<< note [ UsernameRequired ] <$> H.gets (_.username)
       pwdFormV <- V <<< note [ PasswordRequired ] <$> H.gets (_.password)
       pwdConfV <- V <<< note [ ConfirmRequired ] <$> H.gets (_.passwordConfirm)

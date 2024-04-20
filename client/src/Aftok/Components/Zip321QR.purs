@@ -27,7 +27,7 @@ component
   :: forall m output query
    . Monad m
   => System m
-  -> H.Component HH.HTML query Input output m
+  -> H.Component query Input output m
 component system =
   H.mkComponent
     { initialState

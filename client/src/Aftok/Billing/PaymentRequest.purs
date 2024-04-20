@@ -5,7 +5,6 @@ import Control.Monad.Trans.Class (lift)
 import Data.Either (Either(..), note)
 import Data.Foldable (any)
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Symbol (SProxy(..))
 import Data.Tuple (Tuple(..))
 import Data.Validation.Semigroup (V(..), toEither)
 import Effect.Aff (Aff)
@@ -16,6 +15,7 @@ import Halogen.HTML as HH
 import Halogen.HTML.Events as E
 import Halogen.HTML.Properties as P
 import Halogen.HTML.Properties.ARIA as ARIA
+import Type.Proxy (Proxy(..))
 
 import Aftok.Api.Types (APIError(..), Zip321Request(..))
 import Aftok.Api.Billing
@@ -58,6 +58,7 @@ data Action
   | SetDesc String
   | SavePaymentRequest
   | Close
+  | Pass
 
 type Slot id = forall output. H.Slot Query output id
 
@@ -65,7 +66,7 @@ type Slots =
   ( requestQR :: Zip321QR.Slot Unit
   )
 
-_requestQR = SProxy :: SProxy "requestQR"
+_requestQR = Proxy :: Proxy "requestQR"
 
 type Capability (m :: Type -> Type) =
   { createPaymentRequest ::
@@ -83,7 +84,7 @@ component
    . Monad m
   => System m
   -> Capability m
-  -> H.Component HH.HTML Query input output m
+  -> H.Component Query input output m
 component system caps =
   H.mkComponent
     { initialState: const initialState
@@ -110,7 +111,7 @@ component system caps =
   render st =
     HH.div
       [ P.classes [ C.modal ]
-      , P.id_ modalId
+      , P.id modalId
       , P.tabIndex (negate 1)
       , ARIA.role "dialog"
       , ARIA.labelledBy (modalId <> "Title")
@@ -122,12 +123,12 @@ component system caps =
               [ P.classes [ C.modalContent ] ]
               [ HH.div
                   [ P.classes [ C.modalHeader ] ]
-                  [ HH.h5 [ P.classes [ C.modalTitle ], P.id_ (modalId <> "Title") ] [ HH.text "Request a payment" ]
+                  [ HH.h5 [ P.classes [ C.modalTitle ], P.id (modalId <> "Title") ] [ HH.text "Request a payment" ]
                   , HH.button
                       [ P.classes [ C.close ]
                       , ARIA.label "Close"
                       , P.type_ ButtonButton
-                      , E.onClick (\_ -> Just Close)
+                      , E.onClick (\_ -> Close)
                       ]
                       [ HH.span [ ARIA.hidden "true" ] [ HH.text "×" ] ]
                   ]
@@ -137,7 +138,7 @@ component system caps =
                     Form ->
                       [ requestForm st ]
                     QrScan req ->
-                      [ HH.slot _requestQR unit (Zip321QR.component system) req (const Nothing) ]
+                      [ HH.slot _requestQR unit (Zip321QR.component system) req (const Pass) ]
               , HH.div
                   [ P.classes [ C.modalFooter ] ] $
                   case st.mode of
@@ -145,13 +146,13 @@ component system caps =
                       [ HH.button
                           [ P.type_ ButtonButton
                           , P.classes [ C.btn, C.btnSecondary ]
-                          , E.onClick (\_ -> Just Close)
+                          , E.onClick (\_ -> Close)
                           ]
                           [ HH.text "Close" ]
                       , HH.button
                           [ P.type_ ButtonButton
                           , P.classes [ C.btn, C.btnPrimary ]
-                          , E.onClick (\_ -> Just SavePaymentRequest)
+                          , E.onClick (\_ -> SavePaymentRequest)
                           ]
                           [ HH.text "Create Request" ]
                       ]
@@ -160,7 +161,7 @@ component system caps =
                       [ HH.button
                           [ P.type_ ButtonButton
                           , P.classes [ C.btn, C.btnPrimary ]
-                          , E.onClick (\_ -> Just Close)
+                          , E.onClick (\_ -> Close)
                           ]
                           [ HH.text "Close" ]
                       ]
@@ -179,10 +180,10 @@ component system caps =
           , HH.input
               [ P.type_ P.InputText
               , P.classes [ C.formControl, C.formControlSm ]
-              , P.id_ "requestName"
+              , P.id "requestName"
               , P.placeholder "A name for the payment request"
               , P.value (fromMaybe "" st.name)
-              , E.onValueInput (Just <<< SetName)
+              , E.onValueInput SetName
               ]
           ]
       , formGroup st
@@ -193,10 +194,10 @@ component system caps =
           , HH.input
               [ P.type_ P.InputText
               , P.classes [ C.formControl, C.formControlSm ]
-              , P.id_ "requestDesc"
+              , P.id "requestDesc"
               , P.placeholder "Additional descriptive information"
               , P.value (fromMaybe "" st.description)
-              , E.onValueInput (Just <<< SetDesc)
+              , E.onValueInput SetDesc
               ]
           ]
       ]
@@ -249,6 +250,7 @@ component system caps =
     Close -> do
       H.modify_ (const initialState) -- wipe the state for safety
       lift $ system.toggleModal "createPaymentRequest" ModalFFI.HideModal
+    Pass -> pure unit
 
 apiCapability :: Capability Aff
 apiCapability =
