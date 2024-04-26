@@ -7,6 +7,10 @@
     dbmigrations.url = "github:nuttycom/dbmigrations/74ef9388b45ae73a1d9c737d9644e076fe832672";
     dbmigrations-postgresql.url = "github:nuttycom/dbmigrations-postgresql/3c9477e45e923b28d9677dc6291e35bb7c833c28";
     dbmigrations-postgresql-simple.url = "github:nuttycom/dbmigrations-postgresql-simple/d51bbc5a0b7d91f7c8a12fc28e5ecbe7ac326221";
+    purescript-overlay = {
+      url = "github:thomashoneyman/purescript-overlay";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = {
@@ -16,8 +20,10 @@
     dbmigrations,
     dbmigrations-postgresql,
     dbmigrations-postgresql-simple,
+    purescript-overlay,
+    ...
   }: let
-    overlay = final: prev: let
+    haskellPackagesOverlay = final: prev: let
       jailbreakUnbreak = pkg:
         final.haskell.lib.doJailbreak (pkg.overrideAttrs (_: {meta = {};}));
 
@@ -45,6 +51,7 @@
         dbmigrations = dbmigrations.defaultPackage.${final.system};
         dbmigrations-postgresql-simple = dbmigrations-postgresql-simple.defaultPackage.${final.system};
       };
+
     in {
       haskellPackages = prev.haskellPackages.extend haskell-overlay;
     };
@@ -53,7 +60,10 @@
       system: let
         pkgs = import nixpkgs {
           inherit system;
-          overlays = [overlay];
+          overlays = [
+            haskellPackagesOverlay 
+            purescript-overlay.overlays.default
+          ];
         };
 
         hspkgs = pkgs.haskellPackages;
@@ -71,18 +81,30 @@
         };
 
         devShells = {
-          default = pkgs.mkShell {
+          server = pkgs.mkShell {
+            name = "server-shell";
             buildInputs = [
-              hspkgs.ormolu
-              (pkgs.haskell.lib.dontCheck dbmigrations-postgresql.defaultPackage.${system})
-            ];
-            nativeBuildInputs = [
               pkgs.binutils
               pkgs.exa
+              (pkgs.haskell.lib.dontCheck dbmigrations-postgresql.defaultPackage.${system})
+              # pkgs.lrzhs_ffi
               pkgs.openssl
+              hspkgs.ormolu
               pkgs.postgresql
               pkgs.secp256k1
               pkgs.zlib
+            ];
+            inputsFrom = builtins.attrValues self.packages.${system};
+          };
+
+          # adapted from example at https://github.com/thomashoneyman/purescript-overlay
+          client = pkgs.mkShell {
+            name = "client-shell";
+            buildInputs = [
+              pkgs.purs
+              pkgs.spago-unstable
+              pkgs.purs-tidy-bin.purs-tidy-0_10_0
+              pkgs.purs-backend-es
             ];
             inputsFrom = builtins.attrValues self.packages.${system};
           };
