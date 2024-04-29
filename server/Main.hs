@@ -64,7 +64,7 @@ registerOps cfg =
         isValidSaplingAddress (zcashNetwork . _zcashConfig $ cfg) zaddr <&> \valid ->
           if valid
             then Right (Zcash.Address zaddr)
-            else Left (Zcash.ZAddrInvalid),
+            else Left (AddressInvalid),
       sendConfirmationEmail = const $ pure ()
     }
 

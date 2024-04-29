@@ -5,7 +5,7 @@
 module Aftok.ServerConfig where
 
 import Aftok.Config
-import Aftok.Currency.Zcash (ZcashConfig (..), ZcashdConfig (..))
+import Aftok.Currency.Zcash (ZcashConfig (..))
 import Aftok.Snaplet.Users (CaptchaConfig (..))
 import Control.Lens
   ( makeLenses,
@@ -85,16 +85,6 @@ readZcashConfig :: CT.Config -> IO ZcashConfig
 readZcashConfig cfg =
   ZcashConfig
     <$> (C.require cfg "network")
-    <*> (readZcashdConfig $ C.subconfig "zcashd" cfg)
-
-readZcashdConfig :: CT.Config -> IO (Maybe ZcashdConfig)
-readZcashdConfig cfg =
-  getCompose $
-    ZcashdConfig
-      <$> Compose (C.lookup cfg "rpcHost")
-      <*> Compose (C.lookup cfg "rpcPort")
-      <*> Compose (C.lookup cfg "rpcUser")
-      <*> Compose (C.lookup cfg "rpcPassword")
 
 baseSnapConfig :: ServerConfig -> SC.Config m a -> SC.Config m a
 baseSnapConfig qc = SC.setHostname (qc ^. hostname) . SC.setPort (qc ^. port)
