@@ -12,8 +12,7 @@ import Affjax.StatusCode (StatusCode(..))
 import Affjax.RequestBody as RB
 import Affjax.ResponseFormat as RF
 
-type LoginRequest
-  = { username :: String, password :: String }
+type LoginRequest = { username :: String, password :: String }
 
 data LoginResponse
   = LoginOK
@@ -55,16 +54,16 @@ data RecoverBy
   = RecoverByEmail String
   | RecoverByZAddr String
 
-type SignupRequest
-  = { username :: String
-    , password :: String
-    , recoverBy :: RecoverBy
-    , captchaToken :: String
-    , invitationCodes :: Array String
-    }
+type SignupRequest =
+  { username :: String
+  , password :: String
+  , recoverBy :: RecoverBy
+  , captchaToken :: String
+  , invitationCodes :: Array String
+  }
 
 signupRequest :: String -> String -> RecoverBy -> String -> Array String -> SignupRequest
-signupRequest username password recoverBy captchaToken invitationCodes = { username, password, recoverBy, captchaToken, invitationCodes}
+signupRequest username password recoverBy captchaToken invitationCodes = { username, password, recoverBy, captchaToken, invitationCodes }
 
 data SignupResponse
   = SignupOK
@@ -114,7 +113,8 @@ signup req = do
   let
     signupJSON =
       encodeJson
-        $ { username: req.username
+        $
+          { username: req.username
           , password: req.password
           , recoveryType:
               case req.recoverBy of
@@ -139,16 +139,16 @@ signup req = do
       pure (ServiceError Nothing $ printError err)
     Right r
       | r.status == StatusCode 200 -> do
-        log "Registration succeeded!"
-        pure SignupOK
+          log "Registration succeeded!"
+          pure SignupOK
     Right r
       | r.status == StatusCode 403 -> do
-        log ("Registration failed: Capcha Invalid")
-        pure CaptchaInvalid
+          log ("Registration failed: Capcha Invalid")
+          pure CaptchaInvalid
     Right r
       | r.status == StatusCode 400 -> do
-        log ("Registration failed: Z-Address Invalid")
-        pure ZAddrInvalid
+          log ("Registration failed: Z-Address Invalid")
+          pure ZAddrInvalid
     Right r -> do
       log ("Registration failed: " <> r.statusText)
       pure $ ServiceError (Just r.status) r.statusText

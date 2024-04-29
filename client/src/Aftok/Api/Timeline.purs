@@ -76,13 +76,12 @@ parseEventFields obj = do
   stop' <- traverse (_ .: "eventTime") =<< ev .:? "stop"
   note (TypeMismatch "Only 'stop' and 'start' events are supported.")
     $ (StartEvent <$> start')
-    <|> (StopEvent <$> stop')
+        <|> (StopEvent <$> stop')
 
 instance eventDecodeJSON :: DecodeJson (Event String) where
   decodeJson = parseEventFields <=< decodeJson
 
-newtype KeyedEvent i
-  = KeyedEvent
+newtype KeyedEvent i = KeyedEvent
   { eventId :: String
   , event :: Event i
   }
@@ -112,8 +111,7 @@ instance keyedEventDecodeJson :: DecodeJson (KeyedEvent String) where
     obj <- decodeJson json
     keyedEvent <$> obj .: "eventId" <*> parseEventFields obj
 
-newtype Interval i
-  = Interval
+newtype Interval i = Interval
   { start :: i
   , end :: i
   }
@@ -125,8 +123,7 @@ derive instance intervalNewtype :: Newtype (Interval i) _
 instance showInterval :: Show i => Show (Interval i) where
   show (Interval i) = "Interval {start: " <> show i.start <> ", end: " <> show i.end <> "}"
 
-type TimeInterval
-  = Interval Instant
+type TimeInterval = Interval Instant
 
 derive instance intervalFunctor :: Functor Interval
 
@@ -158,8 +155,7 @@ data TimeSpan' t
   | During (Interval t)
   | After t
 
-type TimeSpan
-  = TimeSpan' DateTime
+type TimeSpan = TimeSpan' DateTime
 
 derive instance timeSpanFunctor :: Functor TimeSpan'
 
@@ -205,8 +201,7 @@ apiLogEnd (ProjectId pid) = do
           StartEvent _ -> throwError <<< Unexpected $ "Expected stop event, got start."
           StopEvent _ -> pure kev
 
-newtype ListIntervalsResponse a
-  = ListIntervalsResponse
+newtype ListIntervalsResponse a = ListIntervalsResponse
   { workIndex :: Array ({ intervals :: Array a })
   }
 

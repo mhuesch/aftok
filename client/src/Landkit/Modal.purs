@@ -7,10 +7,10 @@ import Halogen.HTML.Core (ClassName(..))
 import Halogen.HTML.Properties as P
 
 -- TODO: some sketchy stuff related to how this thing is supposed to be open
-component ::
-  forall action slots m.
-  Array (H.ComponentHTML action slots m) ->
-  H.ComponentHTML action slots m
+component
+  :: forall action slots m
+   . Array (H.ComponentHTML action slots m)
+  -> H.ComponentHTML action slots m
 component children =
   HH.div
     [ P.classes (ClassName <$> [ "modal", "fade" ])

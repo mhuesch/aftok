@@ -47,12 +47,11 @@ type CState =
   , mode :: Mode
   }
 
-data Mode 
+data Mode
   = Form
   | QrScan Zip321Request
 
-data Query a 
-  = OpenModal ProjectId BillableId a
+data Query a = OpenModal ProjectId BillableId a
 
 data Action
   = SetName String
@@ -60,32 +59,31 @@ data Action
   | SavePaymentRequest
   | Close
 
-type Slot id
-  = forall output. H.Slot Query output id
+type Slot id = forall output. H.Slot Query output id
 
-type Slots
-  = ( requestQR :: Zip321QR.Slot Unit
-    )
+type Slots =
+  ( requestQR :: Zip321QR.Slot Unit
+  )
 
 _requestQR = SProxy :: SProxy "requestQR"
 
-type Capability (m :: Type -> Type)
-  = { createPaymentRequest ::
-        ProjectId ->
-        BillableId ->
-        PaymentRequestMeta ->
-        m (Either APIError PaymentRequest)
-    }
+type Capability (m :: Type -> Type) =
+  { createPaymentRequest ::
+      ProjectId
+      -> BillableId
+      -> PaymentRequestMeta
+      -> m (Either APIError PaymentRequest)
+  }
 
 modalId :: String
 modalId = "createPaymentRequest"
 
-component ::
-  forall input output m.
-  Monad m =>
-  System m ->
-  Capability m ->
-  H.Component HH.HTML Query input output m
+component
+  :: forall input output m
+   . Monad m
+  => System m
+  -> Capability m
+  -> H.Component HH.HTML Query input output m
 component system caps =
   H.mkComponent
     { initialState: const initialState
@@ -119,112 +117,110 @@ component system caps =
       , ARIA.hidden "true"
       ]
       [ HH.div
-        [ P.classes [C.modalDialog], ARIA.role "document" ]
-        [ HH.div
-          [ P.classes [C.modalContent] ]
+          [ P.classes [ C.modalDialog ], ARIA.role "document" ]
           [ HH.div
-            [ P.classes [C.modalHeader] ]
-            [ HH.h5 [P.classes [C.modalTitle], P.id_ (modalId <>"Title") ] [HH.text "Request a payment"]
-            , HH.button
-              [ P.classes [ C.close ]
-              , ARIA.label "Close"
-              , P.type_ ButtonButton
-              , E.onClick (\_ -> Just Close)
+              [ P.classes [ C.modalContent ] ]
+              [ HH.div
+                  [ P.classes [ C.modalHeader ] ]
+                  [ HH.h5 [ P.classes [ C.modalTitle ], P.id_ (modalId <> "Title") ] [ HH.text "Request a payment" ]
+                  , HH.button
+                      [ P.classes [ C.close ]
+                      , ARIA.label "Close"
+                      , P.type_ ButtonButton
+                      , E.onClick (\_ -> Just Close)
+                      ]
+                      [ HH.span [ ARIA.hidden "true" ] [ HH.text "×" ] ]
+                  ]
+              , HH.div
+                  [ P.classes [ C.modalBody ] ]
+                  case st.mode of
+                    Form ->
+                      [ requestForm st ]
+                    QrScan req ->
+                      [ HH.slot _requestQR unit (Zip321QR.component system) req (const Nothing) ]
+              , HH.div
+                  [ P.classes [ C.modalFooter ] ] $
+                  case st.mode of
+                    Form ->
+                      [ HH.button
+                          [ P.type_ ButtonButton
+                          , P.classes [ C.btn, C.btnSecondary ]
+                          , E.onClick (\_ -> Just Close)
+                          ]
+                          [ HH.text "Close" ]
+                      , HH.button
+                          [ P.type_ ButtonButton
+                          , P.classes [ C.btn, C.btnPrimary ]
+                          , E.onClick (\_ -> Just SavePaymentRequest)
+                          ]
+                          [ HH.text "Create Request" ]
+                      ]
+
+                    QrScan _ ->
+                      [ HH.button
+                          [ P.type_ ButtonButton
+                          , P.classes [ C.btn, C.btnPrimary ]
+                          , E.onClick (\_ -> Just Close)
+                          ]
+                          [ HH.text "Close" ]
+                      ]
+
               ]
-              [ HH.span [ARIA.hidden "true"] [HH.text "×"]]
-            ]
-          , HH.div
-            [ P.classes [C.modalBody] ]
-            case st.mode of
-              Form -> 
-                [ requestForm st ]
-              QrScan req -> 
-                [ HH.slot _requestQR unit (Zip321QR.component system) req (const Nothing) ]
-          , HH.div
-            [ P.classes [C.modalFooter] ] $
-            case st.mode of 
-              Form -> 
-                [ HH.button
-                  [ P.type_ ButtonButton
-                  , P.classes [ C.btn, C.btnSecondary]
-                  , E.onClick (\_ -> Just Close)
-                  ]
-                  [ HH.text "Close" ]
-                , HH.button
-                  [ P.type_ ButtonButton
-                  , P.classes [ C.btn, C.btnPrimary ]
-                  , E.onClick (\_ -> Just SavePaymentRequest)
-                  ]
-                  [ HH.text "Create Request" ]
-                ]
-
-              QrScan _ -> 
-                [ HH.button
-                  [ P.type_ ButtonButton
-                  , P.classes [ C.btn, C.btnPrimary]
-                  , E.onClick (\_ -> Just Close)
-                  ]
-                  [ HH.text "Close" ]
-                ]
-
           ]
-        ]
       ]
 
-      
-  requestForm st = 
+  requestForm st =
     HH.form_
       [ formGroup st
-        [ NameRequired ]
-        [ HH.label
-          [ P.for "requestName"]
-          [ HH.text "Request Name" ]
-        , HH.input
-          [ P.type_ P.InputText
-          , P.classes [ C.formControl, C.formControlSm ]
-          , P.id_ "requestName"
-          , P.placeholder "A name for the payment request"
-          , P.value (fromMaybe "" st.name)
-          , E.onValueInput (Just <<< SetName)
+          [ NameRequired ]
+          [ HH.label
+              [ P.for "requestName" ]
+              [ HH.text "Request Name" ]
+          , HH.input
+              [ P.type_ P.InputText
+              , P.classes [ C.formControl, C.formControlSm ]
+              , P.id_ "requestName"
+              , P.placeholder "A name for the payment request"
+              , P.value (fromMaybe "" st.name)
+              , E.onValueInput (Just <<< SetName)
+              ]
           ]
-        ]
       , formGroup st
-        [ ]
-        [ HH.label
-            [ P.for "requestDesc"]
-            [ HH.text "Request Description" ]
-        , HH.input
-            [ P.type_ P.InputText
-            , P.classes [ C.formControl, C.formControlSm ]
-            , P.id_ "requestDesc"
-            , P.placeholder "Additional descriptive information"
-            , P.value (fromMaybe "" st.description)
-            , E.onValueInput (Just <<< SetDesc)
-            ]
-        ]
+          []
+          [ HH.label
+              [ P.for "requestDesc" ]
+              [ HH.text "Request Description" ]
+          , HH.input
+              [ P.type_ P.InputText
+              , P.classes [ C.formControl, C.formControlSm ]
+              , P.id_ "requestDesc"
+              , P.placeholder "Additional descriptive information"
+              , P.value (fromMaybe "" st.description)
+              , E.onValueInput (Just <<< SetDesc)
+              ]
+          ]
       ]
 
   formGroup :: forall i a. CState -> Array FieldError -> Array (HH.HTML i a) -> HH.HTML i a
   formGroup st fields body =
     HH.div
-     [ P.classes [C.formGroup] ]
-     (body <> (fieldError st =<< fields))
+      [ P.classes [ C.formGroup ] ]
+      (body <> (fieldError st =<< fields))
 
   fieldError :: forall i a. CState -> FieldError -> Array (HH.HTML i a)
   fieldError st field =
-    if any (_ == field) st.fieldErrors
-       then case field of
-            PidFieldNotSet -> err "The project id is missing. Close this dialog and try again."
-            BillableIdNotSet -> err "The billable id is missing. Close this dialog and try again."
-            NameRequired -> err "The name field is required"
-       else []
+    if any (_ == field) st.fieldErrors then case field of
+      PidFieldNotSet -> err "The project id is missing. Close this dialog and try again."
+      BillableIdNotSet -> err "The billable id is missing. Close this dialog and try again."
+      NameRequired -> err "The name field is required"
+    else []
     where
     err str = [ HH.div_ [ HH.span [ P.classes (ClassName <$> [ "badge", "badge-danger-soft" ]) ] [ HH.text str ] ] ]
 
   handleQuery :: forall slots a. Query a -> H.HalogenM CState Action slots output m (Maybe a)
   handleQuery = case _ of
     OpenModal pid bid a -> do
-      H.modify_ (\_ -> initialState { projectId = Just pid, billableId = Just bid } )
+      H.modify_ (\_ -> initialState { projectId = Just pid, billableId = Just bid })
       lift $ system.toggleModal modalId ModalFFI.ShowModal
       pure (Just a)
 
@@ -235,9 +231,9 @@ component system caps =
     SetDesc desc ->
       H.modify_ (_ { description = Just desc })
     SavePaymentRequest -> do
-      pidV <- V <<< note [PidFieldNotSet] <$> H.gets (_.projectId)
-      bidV <- V <<< note [BillableIdNotSet] <$> H.gets (_.billableId)
-      nameV <- V <<< note [NameRequired] <$> H.gets (_.name)
+      pidV <- V <<< note [ PidFieldNotSet ] <$> H.gets (_.projectId)
+      bidV <- V <<< note [ BillableIdNotSet ] <$> H.gets (_.billableId)
+      nameV <- V <<< note [ NameRequired ] <$> H.gets (_.name)
       descV <- H.gets (_.description)
       let reqV = { requestName: _, requestDesc: _ } <$> nameV <*> pure descV
       case toEither (Tuple <$> pidV <*> (Tuple <$> bidV <*> reqV)) of
@@ -250,7 +246,7 @@ component system caps =
               lift $ system.error (show errs)
         Left errors -> do
           H.modify_ (_ { fieldErrors = errors })
-    Close -> do 
+    Close -> do
       H.modify_ (const initialState) -- wipe the state for safety
       lift $ system.toggleModal "createPaymentRequest" ModalFFI.HideModal
 

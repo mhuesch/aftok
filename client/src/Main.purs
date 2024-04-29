@@ -84,14 +84,13 @@ derive instance eqView :: Eq View
 
 derive instance ordView :: Ord View
 
-data MainQuery a
-  = Navigate View a
+data MainQuery a = Navigate View a
 
-type MainState
-  = { view :: View
-    , config :: Signup.Config
-    , selectedProject :: Maybe ProjectId
-    }
+type MainState =
+  { view :: View
+  , config :: Signup.Config
+  , selectedProject :: Maybe ProjectId
+  }
 
 data MainAction
   = Initialize
@@ -100,13 +99,13 @@ data MainAction
   | ProjectAction ProjectList.Output
   | LogoutAction
 
-type Slots
-  = ( login :: Login.Slot Unit
-    , signup :: Signup.Slot Unit
-    , overview :: Overview.Slot Unit
-    , timeline :: Timeline.Slot Unit
-    , billing :: Billing.Slot Unit
-    )
+type Slots =
+  ( login :: Login.Slot Unit
+  , signup :: Signup.Slot Unit
+  , overview :: Overview.Slot Unit
+  , timeline :: Timeline.Slot Unit
+  , billing :: Billing.Slot Unit
+  )
 
 _login = SProxy :: SProxy "login"
 
@@ -118,17 +117,17 @@ _timeline = SProxy :: SProxy "timeline"
 
 _billing = SProxy :: SProxy "billing"
 
-component ::
-  forall input output m.
-  Monad m =>
-  System m ->
-  Login.Capability m ->
-  Signup.Capability m ->
-  Timeline.Capability m ->
-  ProjectList.Capability m ->
-  Overview.Capability m ->
-  Billing.Capability m ->
-  H.Component HH.HTML MainQuery input output m
+component
+  :: forall input output m
+   . Monad m
+  => System m
+  -> Login.Capability m
+  -> Signup.Capability m
+  -> Timeline.Capability m
+  -> ProjectList.Capability m
+  -> Overview.Capability m
+  -> Billing.Capability m
+  -> H.Component HH.HTML MainQuery input output m
 component system loginCap signupCap tlCap pCap ovCap bcap =
   H.mkComponent
     { initialState
@@ -195,7 +194,7 @@ component system loginCap signupCap tlCap pCap ovCap bcap =
     LogoutAction -> do
       lift loginCap.logout
       navigate VLogin
-    ProjectAction (ProjectList.ProjectChange p) -> 
+    ProjectAction (ProjectList.ProjectChange p) ->
       H.modify_ (_ { selectedProject = Just p })
 
   handleQuery :: forall a. MainQuery a -> H.HalogenM MainState MainAction Slots output m (Maybe a)
@@ -249,15 +248,15 @@ logout =
     ]
     [ HH.text "Logout" ]
 
-type NavTop
-  = { label :: String
-    , items :: Array NavItem
-    }
+type NavTop =
+  { label :: String
+  , items :: Array NavItem
+  }
 
-type NavItem
-  = { label :: String
-    , path :: String
-    }
+type NavItem =
+  { label :: String
+  , path :: String
+  }
 
 navItem :: forall a s m. NavItem -> H.ComponentHTML a s m
 navItem ni =

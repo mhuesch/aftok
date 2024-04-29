@@ -4,7 +4,7 @@ import Prelude
 import Data.Either (Either)
 import Data.Lens (view)
 import Data.Maybe (Maybe)
-import URI.URI 
+import URI.URI
   ( HierPath
   , Host
   , Path

@@ -32,7 +32,10 @@ import Aftok.Types
   , pidStr
   )
 import Aftok.Api.Types
-  (APIError, CommsAddress(..), Zip321Request(..))
+  ( APIError
+  , CommsAddress(..)
+  , Zip321Request(..)
+  )
 import Aftok.Api.Json
   ( Decode
   , decompose
@@ -41,8 +44,7 @@ import Aftok.Api.Json
   , parseDatedResponseMay
   )
 
-data DepreciationFn
-  = LinearDepreciation { undep :: Days, dep :: Days }
+data DepreciationFn = LinearDepreciation { undep :: Days, dep :: Days }
 
 instance decodeDepreciationFn :: DecodeJson DepreciationFn where
   decodeJson json = do
@@ -56,8 +58,7 @@ instance decodeDepreciationFn :: DecodeJson DepreciationFn where
         pure $ LinearDepreciation { undep, dep }
       other -> Left $ UnexpectedValue (fromString dtype)
 
-newtype Project' date
-  = Project'
+newtype Project' date = Project'
   { projectId :: ProjectId
   , projectName :: String
   , inceptionDate :: date
@@ -78,8 +79,7 @@ instance projectTraversable :: Traversable Project' where
   traverse f (Project' p) = Project' <<< (\b -> p { inceptionDate = b }) <$> f (p.inceptionDate)
   sequence = traverse identity
 
-type Project
-  = Project' DateTime
+type Project = Project' DateTime
 
 parseProject :: ProjectId -> Object Json -> Either JsonDecodeError (Project' String)
 parseProject projectId pjson = do
@@ -96,8 +96,7 @@ instance decodeJsonProject :: DecodeJson (Project' String) where
     projectId <- x .: "projectId"
     parseProject projectId pjson
 
-newtype Contributor' date
-  = Contributor'
+newtype Contributor' date = Contributor'
   { userId :: UserId
   , handle :: String
   , joinedOn :: date
@@ -134,21 +133,19 @@ instance decodeJsonContributor :: DecodeJson (Contributor' String) where
       revShare = num % den
     pure $ Contributor' { userId, handle, joinedOn, loggedHours, depreciatedHours, revShare }
 
-newtype ProjectDetail' date
-  = ProjectDetail'
+newtype ProjectDetail' date = ProjectDetail'
   { project :: Project' date
   , contributors :: M.Map UserId (Contributor' date)
   }
 
-projectDetail ::
-  forall date.
-  Project' date ->
-  M.Map UserId (Contributor' date) ->
-  ProjectDetail' date
+projectDetail
+  :: forall date
+   . Project' date
+  -> M.Map UserId (Contributor' date)
+  -> ProjectDetail' date
 projectDetail project contributors = ProjectDetail' { project, contributors }
 
-type ProjectDetail
-  = ProjectDetail' DateTime
+type ProjectDetail = ProjectDetail' DateTime
 
 derive instance projectDetailNewtype :: Newtype (ProjectDetail' a) _
 
@@ -199,7 +196,7 @@ encodeInviteBy = case _ of
   EmailCommsAddr email -> encodeJson ({ email: email })
   ZcashCommsAddr zaddr -> encodeJson ({ zaddr: zaddr })
 
-type Invitation' by = 
+type Invitation' by =
   { greetName :: String
   , message :: Maybe String
   , inviteBy :: by
@@ -210,15 +207,15 @@ type Invitation = Invitation' CommsAddress
 encodeInvitation :: Invitation' Json -> Json
 encodeInvitation = encodeJson
 
-type InvResult = 
+type InvResult =
   { zip321_request :: Maybe String
   }
 
 decodeInvResult :: Json -> Either JsonDecodeError InvResult
 decodeInvResult json = do
-    x <- decodeJson json
-    zip321_request <- x .:? "zip321_request"
-    pure $ { zip321_request: zip321_request }
+  x <- decodeJson json
+  zip321_request <- x .:? "zip321_request"
+  pure $ { zip321_request: zip321_request }
 
 invite :: ProjectId -> Invitation -> Aff (Either APIError (Maybe Zip321Request))
 invite pid inv = do
@@ -235,15 +232,15 @@ type ProjectCreateRequest =
 encodeProjectCreateRequest :: ProjectCreateRequest -> Json
 encodeProjectCreateRequest pc =
   "projectName" := pc.projectName
-  ~> "depf" := (
-    case pc.depf of
-      LinearDepreciation vs ->
-        encodeJson {
-          "type": "LinearDepreciation",
-          "arguments": { "undep": unwrap vs.undep, dep: unwrap vs.dep }
-        }
-  )
-  ~> jsonEmptyObject
+    ~> "depf" :=
+      ( case pc.depf of
+          LinearDepreciation vs ->
+            encodeJson
+              { "type": "LinearDepreciation"
+              , "arguments": { "undep": unwrap vs.undep, dep: unwrap vs.dep }
+              }
+      )
+    ~> jsonEmptyObject
 
 decodeProjectId :: Json -> Either JsonDecodeError ProjectId
 decodeProjectId json = (_ .: "projectId") =<< decodeJson json

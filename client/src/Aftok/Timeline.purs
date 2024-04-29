@@ -59,10 +59,10 @@ import Aftok.Types
   , dateStr
   )
 
-type TimelineLimits
-  = { bounds :: TimeInterval
-    , current :: Instant
-    }
+type TimelineLimits =
+  { bounds :: TimeInterval
+  , current :: Instant
+  }
 
 data TimelineEvent
   = LoggedEvent (KeyedEvent Instant)
@@ -78,23 +78,21 @@ tlEventTime = case _ of
   LoggedEvent kev -> eventTime <<< event $ kev
   PhantomEvent i -> i
 
-type DayIntervals
-  = { dayBounds :: TimeInterval
-    , loggedIntervals :: Array (Interval TimelineEvent)
-    }
+type DayIntervals =
+  { dayBounds :: TimeInterval
+  , loggedIntervals :: Array (Interval TimelineEvent)
+  }
 
-type History
-  = M.Map Date DayIntervals
+type History = M.Map Date DayIntervals
 
-type Input
-  = Maybe ProjectId
+type Input = Maybe ProjectId
 
-type TimelineState
-  = { selectedProject :: Maybe ProjectId
-    , history :: M.Map Date DayIntervals
-    , active :: Maybe (Interval TimelineEvent)
-    , activeHistory :: M.Map Date DayIntervals
-    }
+type TimelineState =
+  { selectedProject :: Maybe ProjectId
+  , history :: M.Map Date DayIntervals
+  , active :: Maybe (Interval TimelineEvent)
+  , activeHistory :: M.Map Date DayIntervals
+  }
 
 data TimelineAction
   = Initialize
@@ -103,30 +101,29 @@ data TimelineAction
   | Stop
   | Refresh
 
-type Slot id
-  = forall query. H.Slot query ProjectList.Output id
+type Slot id = forall query. H.Slot query ProjectList.Output id
 
-type Slots
-  = ( projectList :: ProjectList.Slot Unit
-    )
+type Slots =
+  ( projectList :: ProjectList.Slot Unit
+  )
 
 _projectList = SProxy :: SProxy "projectList"
 
-type Capability m
-  = { timer :: EventSource m TimelineAction
-    , logStart :: ProjectId -> m (Either TimelineError (KeyedEvent Instant))
-    , logEnd :: ProjectId -> m (Either TimelineError (KeyedEvent Instant))
-    , listIntervals :: ProjectId -> TimeSpan -> m (Either TimelineError (Array (Interval (KeyedEvent Instant))))
-    , getLatestEvent :: ProjectId -> m (Either TimelineError (Maybe (KeyedEvent Instant)))
-    }
+type Capability m =
+  { timer :: EventSource m TimelineAction
+  , logStart :: ProjectId -> m (Either TimelineError (KeyedEvent Instant))
+  , logEnd :: ProjectId -> m (Either TimelineError (KeyedEvent Instant))
+  , listIntervals :: ProjectId -> TimeSpan -> m (Either TimelineError (Array (Interval (KeyedEvent Instant))))
+  , getLatestEvent :: ProjectId -> m (Either TimelineError (Maybe (KeyedEvent Instant)))
+  }
 
-component ::
-  forall query m.
-  Monad m =>
-  System m ->
-  Capability m ->
-  ProjectList.Capability m ->
-  H.Component HH.HTML query Input ProjectList.Output m
+component
+  :: forall query m
+   . Monad m
+  => System m
+  -> Capability m
+  -> ProjectList.Capability m
+  -> H.Component HH.HTML query Input ProjectList.Output m
 component system caps pcaps =
   H.mkComponent
     { initialState
@@ -218,9 +215,9 @@ component system caps pcaps =
     activeHistory <- lift <<< map (fromMaybe M.empty) <<< runMaybeT $ toHistory system (U.fromMaybe active)
     H.modify_ (_ { activeHistory = activeHistory })
     where
-      projectSelected pid = do
-        setStateForProject pid
-        H.raise (ProjectList.ProjectChange pid)
+    projectSelected pid = do
+      setStateForProject pid
+      H.raise (ProjectList.ProjectChange pid)
 
   logStart :: ProjectId -> H.HalogenM TimelineState TimelineAction Slots ProjectList.Output m Unit
   logStart pid = do
@@ -273,18 +270,18 @@ component system caps pcaps =
               join <$> traverse activeInterval latestEvent
     H.modify_ (_ { selectedProject = Just pid, history = hist, active = active })
 
-historyLine ::
-  forall w i.
-  Tuple Date DayIntervals ->
-  HH.HTML w i
+historyLine
+  :: forall w i
+   . Tuple Date DayIntervals
+  -> HH.HTML w i
 historyLine (Tuple d xs) = datedLine d xs.dayBounds xs.loggedIntervals
 
-datedLine ::
-  forall w i.
-  Date ->
-  TimeInterval ->
-  Array (Interval TimelineEvent) ->
-  HH.HTML w i
+datedLine
+  :: forall w i
+   . Date
+  -> TimeInterval
+  -> Array (Interval TimelineEvent)
+  -> HH.HTML w i
 datedLine d dateBounds xs =
   HH.div
     [ CSS.style do
@@ -304,11 +301,11 @@ datedLine d dateBounds xs =
   where
   px5 = px 5.0
 
-intervalHtml ::
-  forall w i.
-  TimeInterval ->
-  Interval TimelineEvent ->
-  State Number (HH.HTML w i)
+intervalHtml
+  :: forall w i
+   . TimeInterval
+  -> Interval TimelineEvent
+  -> State Number (HH.HTML w i)
 intervalHtml (Interval limits) (Interval i) = do
   offset <- get
   let
@@ -347,13 +344,13 @@ timer =
 updateStart :: KeyedEvent Instant -> TimelineState -> TimelineState
 updateStart ev s = s { active = s.active <|> Just (TL.interval (LoggedEvent ev) (PhantomEvent <<< eventTime <<< event $ ev)) }
 
-updateStop ::
-  forall m.
-  Monad m =>
-  System m ->
-  KeyedEvent Instant ->
-  TimelineState ->
-  m TimelineState
+updateStop
+  :: forall m
+   . Monad m
+  => System m
+  -> KeyedEvent Instant
+  -> TimelineState
+  -> m TimelineState
 updateStop system ev st = do
   let
     updateHistory i = runMaybeT $ toHistory system [ TL.interval (start i) (LoggedEvent ev) ]
@@ -407,29 +404,30 @@ utcDayBounds i =
   in
     TL.interval startInstant (maybe startInstant fromDateTime endOfDay)
 
-localDayBounds ::
-  forall m.
-  Monad m =>
-  System m ->
-  Instant ->
-  MaybeT m (Tuple Date TimeInterval)
+localDayBounds
+  :: forall m
+   . Monad m
+  => System m
+  -> Instant
+  -> MaybeT m (Tuple Date TimeInterval)
 localDayBounds system t = do
   Tuple date start <- MaybeT $ system.dateFFI.midnightLocal t
   nextNoon <-
     MaybeT <<< pure
       $ fromDateTime
-      <$> ( DT.adjust (Hours 12.0) <=< DT.adjust (Days 1.0)
-            $ (toDateTime start)
-        )
+          <$>
+            ( DT.adjust (Hours 12.0) <=< DT.adjust (Days 1.0)
+                $ (toDateTime start)
+            )
   Tuple _ end <- MaybeT $ system.dateFFI.midnightLocal nextNoon
   pure $ Tuple date (interval start end)
 
-splitInterval ::
-  forall m.
-  Monad m =>
-  System m ->
-  Interval TimelineEvent ->
-  MaybeT m (Array (Tuple Date DayIntervals))
+splitInterval
+  :: forall m
+   . Monad m
+  => System m
+  -> Interval TimelineEvent
+  -> MaybeT m (Array (Tuple Date DayIntervals))
 splitInterval system i = do
   lift <<< system.log $ "Splitting interval " <> show i
   -- day bounds are based on the start event.
@@ -451,12 +449,12 @@ splitInterval system i = do
   --lift <<< system.log $ "Split result: " <> show split
   pure split
 
-toHistory ::
-  forall m.
-  Monad m =>
-  System m ->
-  Array (Interval TimelineEvent) ->
-  MaybeT m (M.Map Date DayIntervals)
+toHistory
+  :: forall m
+   . Monad m
+  => System m
+  -> Array (Interval TimelineEvent)
+  -> MaybeT m (M.Map Date DayIntervals)
 toHistory system xs = do
   splits <- join <$> traverse (splitInterval system) xs
   pure $ M.fromFoldableWith unionDayIntervals splits

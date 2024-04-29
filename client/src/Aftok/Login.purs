@@ -20,35 +20,33 @@ data LoginError
   = Forbidden
   | ServerError
 
-type LoginState
-  = { username :: String
-    , password :: String
-    , loginError :: Maybe LoginError
-    }
+type LoginState =
+  { username :: String
+  , password :: String
+  , loginError :: Maybe LoginError
+  }
 
 data LoginAction
   = SetUsername String
   | SetPassword String
   | Login WE.Event
 
-data LoginResult
-  = LoginComplete { username :: String }
+data LoginResult = LoginComplete { username :: String }
 
-type Slot id
-  = forall query. H.Slot query LoginResult id
+type Slot id = forall query. H.Slot query LoginResult id
 
-type Capability m
-  = { login :: String -> String -> m LoginResponse
-    , checkLogin :: m LoginResponse
-    , logout :: m Unit
-    }
+type Capability m =
+  { login :: String -> String -> m LoginResponse
+  , checkLogin :: m LoginResponse
+  , logout :: m Unit
+  }
 
-component ::
-  forall query input m.
-  Monad m =>
-  System m ->
-  Capability m ->
-  H.Component HH.HTML query input LoginResult m
+component
+  :: forall query input m
+   . Monad m
+  => System m
+  -> Capability m
+  -> H.Component HH.HTML query input LoginResult m
 component system caps =
   H.mkComponent
     { initialState

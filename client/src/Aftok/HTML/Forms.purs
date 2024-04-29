@@ -11,11 +11,12 @@ import CSS.Display (display, flex)
 import CSS.Flexbox (flexFlow, row, nowrap)
 import Aftok.Api.Types (CommsType(..))
 
-type CommsState r = 
+type CommsState r =
   { channel :: CommsType
   , email :: Maybe String
   , zaddr :: Maybe String
-  | r }
+  | r
+  }
 
 type SetCommsType action = CommsType -> action
 type SetEmail action = String -> action
@@ -56,16 +57,16 @@ commsSwitch setCommsType rt =
 
 type CommsErrors i a = CommsType -> Array (HH.HTML i a)
 
-commsField :: 
-  forall i a r. 
-  SetEmail a -> 
-  SetZaddr a -> 
-  CommsState r -> 
-  CommsErrors i a -> 
-  HH.HTML i a
+commsField
+  :: forall i a r
+   . SetEmail a
+  -> SetZaddr a
+  -> CommsState r
+  -> CommsErrors i a
+  -> HH.HTML i a
 commsField setEmail setZAddr st errs = case st.channel of
   EmailComms ->
-    HH.div_ $ 
+    HH.div_ $
       [ HH.label [ P.for "email" ] [ HH.text "Email Address" ]
       , HH.input
           [ P.type_ P.InputEmail
@@ -76,7 +77,7 @@ commsField setEmail setZAddr st errs = case st.channel of
           , E.onValueInput (Just <<< setEmail)
           ]
       ]
-      <> errs EmailComms 
+        <> errs EmailComms
   ZcashComms ->
     HH.div_ $
       [ HH.label
@@ -98,4 +99,4 @@ commsField setEmail setZAddr st errs = case st.channel of
           , E.onValueInput (Just <<< setZAddr)
           ]
       ]
-      <> errs ZcashComms
+        <> errs ZcashComms
