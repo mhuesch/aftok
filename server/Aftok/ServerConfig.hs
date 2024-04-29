@@ -1,10 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Aftok.ServerConfig where
 
 import Aftok.Config
-import Aftok.Currency.Zcash (ZcashdConfig (..))
+import Aftok.Currency.Zcash (ZcashConfig (..))
 import Aftok.Snaplet.Users (CaptchaConfig (..))
 import Control.Lens
   ( makeLenses,
@@ -19,6 +20,7 @@ import Filesystem.Path.CurrentOS
     fromText,
   )
 import qualified Filesystem.Path.CurrentOS as P
+import Lrzhs.Types (Network (..))
 import Snap.Core
 import qualified Snap.Http.Server.Config as SC
 import Snap.Snaplet.PostgresqlSimple
@@ -35,7 +37,7 @@ data ServerConfig = ServerConfig
     _templatePath :: P.FilePath,
     _staticAssetPath :: P.FilePath,
     _recaptchaSecret :: CaptchaConfig,
-    _zcashdConfig :: ZcashdConfig
+    _zcashConfig :: ZcashConfig
   }
 
 makeLenses ''ServerConfig
@@ -71,14 +73,18 @@ readServerConfig cfg pc =
               "staticAssetPath"
         )
     <*> (CaptchaConfig <$> C.require cfg "recaptchaSecret")
-    <*> (readZcashdConfig $ C.subconfig "zcashd" cfg)
+    <*> (readZcashConfig $ C.subconfig "zcash" cfg)
 
-readZcashdConfig :: CT.Config -> IO ZcashdConfig
-readZcashdConfig cfg =
-  ZcashdConfig <$> C.require cfg "rpcHost"
-    <*> C.require cfg "rpcPort"
-    <*> C.require cfg "rpcUser"
-    <*> C.require cfg "rpcPassword"
+instance CT.Configured Network where
+  convert = \case
+    CT.String "mainnet" -> Just Mainnet
+    CT.String "testnet" -> Just Testnet
+    _ -> Nothing
+
+readZcashConfig :: CT.Config -> IO ZcashConfig
+readZcashConfig cfg =
+  ZcashConfig
+    <$> (C.require cfg "network")
 
 baseSnapConfig :: ServerConfig -> SC.Config m a -> SC.Config m a
 baseSnapConfig qc = SC.setHostname (qc ^. hostname) . SC.setPort (qc ^. port)
